@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d0a18">
-  <meta name="description" content="Bodega Unificada: catálogo fotográfico, inventario y registro por escaneo para sucursales.">
+  <meta name="description" content="MULTIPART: catálogo fotográfico, inventario y registro por escaneo para sucursales.">
   <title>MULTIPART · Gestión de almacén</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
   <!-- Estilos integrados: no necesitas subir styles.css -->
   <style>
 /*
- * BODEGA UNIFICADA V2 · SISTEMA VISUAL
+ * MULTIPART V3 · SISTEMA VISUAL
  * 1. Catálogo oscuro/violeta: referencia exacta de Bodega Fotos.
  * 2. Toma de ubicaciones clara: referencia de la pantalla de Escaneo.
  * 3. Sin emojis; todos los símbolos son iconos SVG lineales.
@@ -40,6 +40,19 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);max-height:94
 
 /* Acceso compacto MULTIPART: sin textos de relleno. */
 .login-logo{margin-bottom:18px}.login-card h1{margin:0 0 22px}.branch-choice{justify-content:flex-start}.branch-choice strong{font-size:13px}
+
+/* Inventario: estética morada y lectura rápida, igual que catálogo y pedidos. */
+.inventory-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 19px}
+.inv-stat{background:linear-gradient(135deg,#231740,#18122f);border:1px solid #433164;border-radius:17px;padding:17px 20px;display:flex;flex-direction:column;gap:8px;min-height:104px;box-shadow:0 8px 24px rgba(6,3,22,.12)}
+.inv-stat span{font-size:12px;color:#c0b3e4;font-weight:650}
+.inv-stat strong{font-size:29px;line-height:1.05;color:#eee7ff;font-weight:800;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+#inventoryPage .data-shell{border-color:#443263;background:#17112d}
+#inventoryPage .data-head{background:#21163b;color:#bcb0db}
+#inventoryPage .data-row{border-color:#302348}
+#inventoryPage .data-row:hover:not(.data-head){background:rgba(132,90,245,.06)}
+.inv-count{color:#d0b4ff;font-variant-numeric:tabular-nums}
+.inventory-pagination{padding:18px 0 28px;text-align:center}
+@media(max-width:640px){.inventory-stats{gap:7px}.inv-stat{padding:11px 10px;min-height:90px}.inv-stat span{font-size:10px}.inv-stat strong{font-size:23px}}
 
   </style>
 </head>
@@ -132,7 +145,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);max-height:94
       </section>
 
       <!-- INVENTARIO, PEDIDOS E HISTORIAL son privados por sucursal. -->
-      <section id="inventoryPage" class="page wrap" hidden><div class="section-head"><div><span class="eyebrow">OPERACIONES</span><h1>Inventario</h1><p class="subtle">Conteo de lecturas por producto y ubicación.</p></div><button class="button outline" id="exportInventory" type="button">Exportar CSV</button></div><div class="data-shell"><div id="inventoryList"></div></div></section>
+      <section id="inventoryPage" class="page wrap" hidden><div class="section-head"><div><span class="eyebrow">OPERACIONES</span><h1>Inventario</h1><p class="subtle">Productos y ubicaciones registrados.</p></div><button class="button outline" id="exportInventory" type="button">Exportar CSV</button></div><div id="inventorySummary" class="inventory-stats"></div><div class="data-shell"><div id="inventoryList"></div></div><div id="inventoryPagination" class="inventory-pagination"></div></section>
       <section id="ordersPage" class="page wrap" hidden><div class="section-head"><div><span class="eyebrow">GESTIÓN DE SALIDAS</span><h1>Pedidos</h1><p class="subtle">Pedidos exclusivos de la sucursal activa.</p></div><button class="button primary" id="newOrder" type="button">Nuevo pedido</button></div><div id="ordersList" class="orders-grid"></div></section>
       <section id="historyPage" class="page wrap" hidden><div class="section-head"><div><span class="eyebrow">TRAZABILIDAD</span><h1>Historial</h1><p class="subtle">Cambios de ubicaciones, fotografías y pedidos de esta sucursal.</p></div><button class="button outline" id="refreshHistory">Actualizar</button></div><div class="data-shell"><div id="historyList"></div></div></section>
     </main>
@@ -153,7 +166,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);max-height:94
   </script>
   <script>
 /**
- * MULTIPART V2 — INTERFAZ PARA GITHUB PAGES
+ * MULTIPART V3 — INTERFAZ PARA GITHUB PAGES
  * ================================================================
  * Publicar únicamente index.html: contiene CSS, app y biblioteca ZXing.
  * Configura aquí la URL de Apps Script V2. Nunca escribas contraseñas aquí.
@@ -163,7 +176,7 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);max-height:94
  *  - Lectura del resultado con JSONP por el ID aleatorio, en trozos.
  *  - Jamás usar GET para modificar datos y jamás enviar claves en URL.
  */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxGg_Pe_N0K3Vlwt80AY2tLa2gb6UN6hQmkKXRJEkIuepj9nI9RsEticJvakeiCIotMJQ/exec'; // Debe ser la implementación NUEVA del Code.gs V2, no la V1.
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwTrbGcwReG8By--XK_yviuo_kW8GAv6svpzOykEwViQcOFVI8AIIli8zlBWhMOvdscRQ/exec'; // Debe ser la implementación NUEVA del Code.gs V3.
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => Array.from(root.querySelectorAll(selector));
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
@@ -206,7 +219,7 @@ function setIcon(selector,name){const el=$(selector);if(el)el.innerHTML=ico(name
 const state = {
   branch:'S1',token:'',auth:null,productos:[],ubicaciones:[],fotos:[],inventario:[],pedidos:[],historial:[],
   photoByCode:new Map(),locationByCode:new Map(),photoCache:new Map(),tab:'catalog',category:'',filter:'all',search:'',pageSize:42,shown:42,
-  activeLoc:null,locationSub:'scan',cameraMode:null,readCount:0
+  activeLoc:null,locationSub:'scan',cameraMode:null,readCount:0,inventoryShown:160
 };
 let toastTimer=null, imageObserver=null, photoQueue=[],photoActive=0;
 const photoPending=new Map();
@@ -287,7 +300,7 @@ function enviarFormularioPost(json,id){
  * consultamos por JSONP un resultado temporal identificado con 48 dígitos
  * aleatorios. Si el POST no se confirma, el mismo ID se reenvía mediante
  * formulario a un iframe oculto. El servidor evita procesar dos veces el ID.
- * Las contraseñas y tokens viajan SOLO en POST, nunca en URLs de JSONP.
+ * Las credenciales viajan solo mediante POST; ninguna clave forma parte de la URL.
  */
 async function rpc(action,payload={}){
   if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL))
@@ -384,8 +397,8 @@ function init(){
   $('#capturePhoto').addEventListener('click',capturePhoto);
   $('#exportInventory').addEventListener('click',exportInventory);
   $('#newOrder').addEventListener('click',()=>orderEditor());
-  const saved=sessionStorage.getItem('bodega_v2_token'),branch=sessionStorage.getItem('bodega_v2_branch');
-  if(saved&&['S1','CM'].includes(branch)){state.token=saved;state.branch=branch;showLoggedIn().catch(()=>{state.token='';sessionStorage.removeItem('bodega_v2_token');$('#app').hidden=true;$('#loginScreen').hidden=false;});}
+  const saved=sessionStorage.getItem('multipart_v3_token'),branch=sessionStorage.getItem('multipart_v3_branch');
+  if(saved&&['S1','CM'].includes(branch)){state.token=saved;state.branch=branch;showLoggedIn().catch(()=>{state.token='';sessionStorage.removeItem('multipart_v3_token');$('#app').hidden=true;$('#loginScreen').hidden=false;});}
   const hashCode=new URLSearchParams(location.search).get('codigo');if(hashCode)state.search=hashCode;
 }
 async function onLogin(e){
@@ -394,16 +407,16 @@ async function onLogin(e){
   const submit=$('#loginSubmit');const oldHtml=submit.innerHTML;
   submit.disabled=true;submit.textContent='Conectando...';$('#loginError').hidden=true;
   try{
-    if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL))throw Error('Falta configurar la URL /exec del servidor V2 en index.html.');
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL))throw Error('Falta configurar la URL /exec del servidor V3 en index.html.');
     const health=await jsonp('health','');
-    if(!health||health.app!=='MULTIPART_V2')throw Error('La URL corresponde a otra versión de Apps Script. Publica Code.gs de la V2 y copia su enlace /exec en index.html.');
-    if(health.version!=='2.0.3')throw Error('Apps Script sigue publicado en una versión antigua ('+(health.version||'desconocida')+'). Actualiza Code.gs y publica una nueva versión.');
-    if(!health.configured)throw Error('Ejecuta configurar() en Apps Script antes de ingresar.');
-    if(!health.keysConfigured)throw Error('Falta ejecutar configurarClaves() con las siete claves de 4 a 8 caracteres en Apps Script.');
+    if(!health||health.app!=='MULTIPART_V3')throw Error('La URL corresponde a otro Apps Script. Publica MULTIPART V3 y usa el enlace /exec de esa implementación.');
+    if(health.version!=='3.0.0')throw Error('Apps Script sigue publicado en una versión antigua ('+(health.version||'desconocida')+'). Actualiza Code.gs y publica una nueva versión.');
+    if(!health.configured)throw Error('Ejecuta configurar() desde un libro nuevo de Google Sheets antes de ingresar.');
+    if(!health.keysConfigured)throw Error('Falta ejecutar configurarClaves() con las tres claves de 4 a 8 caracteres en Apps Script.');
     submit.textContent='Verificando acceso...';
     const response=await rpc('login',{branch:state.branch,password:pwd});
     state.token=response.token;state.auth=response.auth;
-    sessionStorage.setItem('bodega_v2_token',state.token);sessionStorage.setItem('bodega_v2_branch',state.branch);
+    sessionStorage.setItem('multipart_v3_token',state.token);sessionStorage.setItem('multipart_v3_branch',state.branch);
     $('#loginPass').value='';await showLoggedIn();
   }catch(err){$('#loginError').textContent=err.message;$('#loginError').hidden=false;}
   finally{submit.disabled=false;submit.innerHTML=oldHtml;}
@@ -417,7 +430,7 @@ async function showLoggedIn(){
 }
 async function logout(){
   try{await rpc('logout');}catch(e){}
-  sessionStorage.removeItem('bodega_v2_token');sessionStorage.removeItem('bodega_v2_branch');
+  sessionStorage.removeItem('multipart_v3_token');sessionStorage.removeItem('multipart_v3_branch');
   state.token='';state.auth=null;state.photoCache.clear();state.productos=[];state.fotos=[];state.ubicaciones=[];state.activeLoc=null;
   $('#loginScreen').hidden=false;$('#app').hidden=true;setTab('catalog');
 }
@@ -426,23 +439,42 @@ function reindexBranch(){
   state.fotos.forEach(f=>{const a=state.photoByCode.get(f.codigo)||[];a.push(f);state.photoByCode.set(f.codigo,a);});
   state.ubicaciones.forEach(u=>{const a=state.locationByCode.get(u.codigo)||[];a.push(u);state.locationByCode.set(u.codigo,a);});
 }
+/**
+ * Datos aislados por sucursal. Una sola petición trae los registros de la
+ * sucursal activa; el catálogo solo se envía en la carga inicial/actualización.
+ * La navegación entre secciones es local, sin sincronizaciones innecesarias.
+ */
+function aplicarDatos(d,withCatalog){
+  if(d.branch!==state.branch)throw Error('La respuesta pertenece a otra sucursal');
+  state.auth=d.auth;
+  if(withCatalog){state.productos=d.productos||[];buildCategories();}
+  state.ubicaciones=d.ubicaciones||[];
+  state.fotos=d.fotos||[];
+  state.inventario=d.inventario||[];
+  state.pedidos=d.pedidos||[];
+  state.historial=d.historial||[];
+  reindexBranch();
+  $('#lightProductCount').textContent=state.productos.length+' productos';
+  $('#locationSync').textContent='Actualizado '+new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+  pintarSeccion();
+}
+function pintarSeccion(){
+  if(state.tab==='catalog')renderCatalog();
+  else if(state.tab==='location')renderLocationExtra();
+  else if(state.tab==='inventory')renderInventory();
+  else if(state.tab==='orders')renderOrders();
+  else if(state.tab==='history')renderHistory();
+}
 async function updateBranchData(){
-  const d=await rpc('branchData');
-  if(d.branch!==state.branch)throw Error('La sucursal de la sesión cambió, inicia sesión otra vez');
-  state.auth=d.auth;state.ubicaciones=d.ubicaciones||[];state.fotos=d.fotos||[];state.inventario=d.inventario||[];state.pedidos=d.pedidos||[];state.historial=d.historial||[];
-  reindexBranch();renderCatalog();renderInventory();renderOrders();renderHistory();renderLocationExtra();
+  const data=await rpc('branchData',{includeCatalog:false});
+  aplicarDatos(data,false);
 }
 async function refreshData(reloadCatalog=false){
-  $('#locationSync').textContent='Sincronizando...';
+  $('#locationSync').textContent='Actualizando...';
   try{
-    if(reloadCatalog||!state.productos.length){
-      const [c,d]=await Promise.all([rpc('catalog'),rpc('branchData')]);
-      if(d.branch!==state.branch)throw Error('Datos de sucursal diferentes');
-      state.productos=c.productos;state.auth=d.auth;state.ubicaciones=d.ubicaciones;state.fotos=d.fotos;state.inventario=d.inventario;state.pedidos=d.pedidos;state.historial=d.historial;
-      reindexBranch();buildCategories();renderCatalog();renderInventory();renderOrders();renderHistory();renderLocationExtra();
-    }else await updateBranchData();
-    $('#lightProductCount').textContent=state.productos.length+' productos';
-    $('#locationSync').textContent='Sincronizado '+new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+    const withCatalog=reloadCatalog||!state.productos.length;
+    const d=await rpc('branchData',{includeCatalog:withCatalog});
+    aplicarDatos(d,withCatalog);
   }catch(e){$('#locationSync').textContent='Sin conexión';throw e;}
 }
 function setTab(tab){
@@ -451,7 +483,8 @@ function setTab(tab){
   ['catalog','location','inventory','orders','history'].forEach(t=>$('#'+t+'Page').hidden=t!==tab);
   $$('.nav-button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   if(tab==='location')setLocationSub(state.locationSub);
-  window.scrollTo({top:0,behavior:'smooth'});
+  else pintarSeccion();
+  window.scrollTo({top:0,behavior:'instant'});
 }
 function categoryOf(item){return (item.categoria||item.descripcion.split(/\s+/)[0]||'Otros').toUpperCase();}
 function buildCategories(){
@@ -484,26 +517,28 @@ function renderCatalog(){
 function setupLazyPhotos(root){
   if(imageObserver)imageObserver.disconnect();
   imageObserver=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){imageObserver.unobserve(e.target);loadPhotoInto(e.target);}}),{rootMargin:'250px'});
-  $$('img[data-photo-id]',root).forEach(i=>{const id=i.dataset.photoId;if(state.photoCache.has(id))i.src=state.photoCache.get(id);else imageObserver.observe(i);});
+  $$('img[data-photo-id]',root).forEach(i=>{const id=i.dataset.photoId;if(state.photoCache.has(id+'|miniatura'))i.src=state.photoCache.get(id+'|miniatura');else imageObserver.observe(i);});
 }
 async function loadPhotoInto(img){
   const id=img.dataset.photoId;
-  if(state.photoCache.has(id)){img.src=state.photoCache.get(id);return;}
+  if(state.photoCache.has(id+'|miniatura')){img.src=state.photoCache.get(id+'|miniatura');return;}
   photoQueue.push({id,img});runPhotoQueue();
 }
-async function getPhotoData(id){
-  if(state.photoCache.has(id))return state.photoCache.get(id);
-  if(photoPending.has(id))return photoPending.get(id);
+/** Miniaturas ligeras en el catálogo; original solo cuando se abre/edita. */
+async function getPhotoData(id,full=false){
+  const key=id+(full?'|original':'|miniatura');
+  if(state.photoCache.has(key))return state.photoCache.get(key);
+  if(photoPending.has(key))return photoPending.get(key);
   const branchAtStart=state.branch;
   const work=(async()=>{
-    const r=await rpc('photoRead',{id});
-    if(branchAtStart!==state.branch)throw Error('La sucursal cambió durante la carga de la fotografía');
+    const r=await rpc('photoRead',{id,thumbnail:!full});
+    if(branchAtStart!==state.branch)throw Error('La sucursal cambió durante la carga');
     const src='data:'+r.mime+';base64,'+r.data;
-    state.photoCache.set(id,src);
-    if(state.photoCache.size>95)state.photoCache.delete(state.photoCache.keys().next().value);
+    state.photoCache.set(key,src);
+    if(state.photoCache.size>55)state.photoCache.delete(state.photoCache.keys().next().value);
     return src;
-  })().finally(()=>photoPending.delete(id));
-  photoPending.set(id,work);
+  })().finally(()=>photoPending.delete(key));
+  photoPending.set(key,work);
   return work;
 }
 async function runPhotoQueue(){
@@ -558,7 +593,7 @@ function openProduct(code){
 }
 async function viewPhoto(id){
   openModal('Fotografía','<p class="modal-caption">Cargando imagen privada...</p>');
-  try{const src=await getPhotoData(id);const modal=$('#mainDialog');if(!modal.open)return;$('#modalBody').innerHTML=`<div class="modal-panel"><div class="modal-head"><h2>Fotografía</h2><button class="modal-close" id="modalClose" aria-label="Cerrar">${ico('close')}</button></div><img class="full-image" alt="Fotografía de producto" src="${src}"><div class="modal-actions"><button class="button outline" id="shareViewed">${ico('share')} Compartir imagen</button></div></div>`;$('#modalClose').onclick=closeModal;$('#shareViewed').onclick=()=>shareImage(src);}catch(e){fail(e);closeModal();}
+  try{const src=await getPhotoData(id,true);const modal=$('#mainDialog');if(!modal.open)return;$('#modalBody').innerHTML=`<div class="modal-panel"><div class="modal-head"><h2>Fotografía</h2><button class="modal-close" id="modalClose" aria-label="Cerrar">${ico('close')}</button></div><img class="full-image" alt="Fotografía de producto" src="${src}"><div class="modal-actions"><button class="button outline" id="shareViewed">${ico('share')} Compartir imagen</button></div></div>`;$('#modalClose').onclick=closeModal;$('#shareViewed').onclick=()=>shareImage(src);}catch(e){fail(e);closeModal();}
 }
 async function shareImage(src){
   try{const blob=await (await fetch(src)).blob(),file=new File([blob],'foto_producto.jpg',{type:blob.type});
@@ -567,22 +602,21 @@ async function shareImage(src){
   }catch(e){if(e.name!=='AbortError')fail(e);}
 }
 /** La clave de ubicaciones/borrado solo se envía por POST al backend. */
+/**
+ * Solamente tres claves. Entrar a una sucursal permite editar sus fotos,
+ * ubicaciones, inventario y pedidos. El servidor comprueba el ámbito.
+ * Compartir o cambiar de sucursal continúa siendo exclusivo de MASTER.
+ */
 async function ensurePermission(kind){
-  if(state.auth&&(state.auth.master||state.auth[kind]))return true;
-  return new Promise(resolve=>{
-    const dlg=$('#mainDialog');closeModal();
-    const label=kind==='location'?'modificar ubicaciones':'eliminar o recortar fotografías';
-    const root=openModal('Autorización necesaria',`<p class="modal-caption">Introduce la contraseña de ${escapeHtml(label)} correspondiente a ${escapeHtml(branchLabel(state.branch))}. También puedes utilizar la clave maestra al iniciar sesión.</p><form id="permissionForm"><label class="field"><span>Contraseña de autorización</span><input id="permissionValue" type="password" minlength="4" maxlength="8" required autocomplete="off"></label><div class="modal-actions"><button class="button outline" type="button" id="permissionCancel">Cancelar</button><button class="button primary" id="permissionSubmit">Autorizar</button></div></form>`);
-    let finished=false;const finish=v=>{if(finished)return;finished=true;dlg.removeEventListener('close',onClose);closeModal();resolve(v);};
-    const onClose=()=>finish(false);dlg.addEventListener('close',onClose);
-    $('#permissionCancel').onclick=()=>finish(false);
-    $('#permissionForm').onsubmit=async e=>{e.preventDefault();$('#permissionSubmit').disabled=true;try{const d=await rpc('elevate',{kind,password:$('#permissionValue').value});state.auth=d.auth;finish(true);toast('Permiso autorizado');}catch(err){toast(err.message,true);$('#permissionSubmit').disabled=false;}};
-  });
+  if(!state.auth)return false;
+  if(state.auth.master||state.auth[kind])return true;
+  toast('Tu sesión no permite realizar esta operación',true);
+  return false;
 }
 async function deletePhoto(id,code){
   if(!await ensurePermission('delete'))return;
   if(!await askConfirm('Eliminar fotografía','¿Quitar esta foto de '+branchLabel(state.branch)+'? La fotografía de la otra sucursal no se modificará.','Eliminar fotografía')){openProduct(code);return;}
-  try{await rpc('photoRemove',{id});state.photoCache.delete(id);await updateBranchData();openProduct(code);toast('Fotografía eliminada de esta sucursal');}catch(e){fail(e);}
+  try{await rpc('photoRemove',{id});state.photoCache.delete(id+'|miniatura');state.photoCache.delete(id+'|original');await updateBranchData();openProduct(code);toast('Fotografía eliminada de esta sucursal');}catch(e){fail(e);}
 }
 async function sharePhoto(id,code){
   if(!state.auth.master){toast('Solo el administrador maestro puede compartir fotos',true);return;}
@@ -592,8 +626,8 @@ async function sharePhoto(id,code){
 }
 async function editPhoto(id,code){
   if(!await ensurePermission('delete'))return;
-  try{toast('Preparando editor de recorte...');const source=await getPhotoData(id);openCrop(source,async data=>{
-    try{await rpc('photoReplace',{id,mime:'image/jpeg',data});state.photoCache.delete(id);await updateBranchData();openProduct(code);toast('Recorte guardado en Drive');}catch(e){fail(e);}
+  try{toast('Preparando editor de recorte...');const source=await getPhotoData(id,true);openCrop(source,async data=>{
+    try{await rpc('photoReplace',{id,mime:'image/jpeg',data});state.photoCache.delete(id+'|miniatura');state.photoCache.delete(id+'|original');await updateBranchData();openProduct(code);toast('Recorte guardado en Drive');}catch(e){fail(e);}
   });}catch(e){fail(e);}
 }
 async function deleteLocation(id,code){
@@ -741,11 +775,17 @@ function printActiveLocation(){
 }
 
 /* INVENTARIO: utiliza las mismas lecturas que se guardan en UBICACIONES. */
+/** Tarjetas lila + tabla oscura y paginación para no congelar Android. */
 function renderInventory(){
   const items=state.inventario.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo));
   const productsByCode=new Map(state.productos.map(p=>[p.codigo,p]));
+  const total=items.reduce((n,i)=>n+(Number(i.cantidad)||0),0);
+  const totalCodes=new Set(items.map(i=>i.codigo)).size;
+  $('#inventorySummary').innerHTML=`<div class="inv-stat"><span>Productos registrados</span><strong>${totalCodes.toLocaleString('es-SV')}</strong></div><div class="inv-stat"><span>Ubicaciones con lecturas</span><strong>${items.length.toLocaleString('es-SV')}</strong></div><div class="inv-stat"><span>Lecturas acumuladas</span><strong>${total.toLocaleString('es-SV')}</strong></div>`;
   $('#inventoryList').innerHTML='<div class="data-row data-head"><span>CÓDIGO</span><span>PRODUCTO</span><span>UBICACIÓN</span><span>LECTURAS</span></div>'+
-    (items.map(i=>{const p=productsByCode.get(i.codigo);return `<div class="data-row"><span class="code">${escapeHtml(i.codigo)}</span><span>${escapeHtml(p?p.descripcion:'Producto sin descripción')}</span><span>${escapeHtml(i.ubicacion)}</span><b>${i.cantidad}</b></div>`;}).join('')||'<div class="subtle" style="padding:25px">Aún no hay productos escaneados.</div>');
+    (items.slice(0,state.inventoryShown).map(i=>{const p=productsByCode.get(i.codigo);return `<div class="data-row"><span class="code">${escapeHtml(i.codigo)}</span><span>${escapeHtml(p?p.descripcion:'Sin descripción')}</span><span><span class="shelf-chip">${escapeHtml(i.ubicacion)}</span></span><b class="inv-count">${i.cantidad}</b></div>`;}).join('')||'<div class="subtle" style="padding:25px">Aún no hay productos registrados.</div>');
+  $('#inventoryPagination').innerHTML=items.length>state.inventoryShown?`<button class="button outline" type="button" id="moreInventory">Mostrar más (${items.length-state.inventoryShown} restantes)</button>`:'';
+  const more=$('#moreInventory');if(more)more.onclick=()=>{state.inventoryShown+=160;renderInventory();};
 }
 function exportInventory(){
   const rows=[['codigo_producto','descripcion','ubicacion','cantidad'],...state.inventario.map(i=>{const p=state.productos.find(x=>x.codigo===i.codigo);return[i.codigo,p?p.descripcion:'',i.ubicacion,i.cantidad];})];
@@ -795,16 +835,18 @@ function renderHistory(){
 /** La clave maestra permite cambiar de sucursal sin iniciar con otra cuenta. */
 function showAdmin(){
   if(!state.auth?.master){openModal('Administración',`<p class="modal-caption">Has ingresado con una clave de sucursal. Para administrar ambas sucursales, cierra sesión e ingresa con la clave maestra.</p>`);return;}
-  openModal('Panel de administración',`<p class="modal-caption">Sesión maestra autorizada. La información visible siempre corresponde a una sola sucursal.</p><p class="eyebrow">SUCURSAL ACTIVA</p><div class="tag-line"><span class="tag">${escapeHtml(branchLabel(state.branch))}</span></div><div class="modal-actions" style="justify-content:start"><button class="button primary" id="adminSwitch">Cambiar a ${state.branch==='S1'?'Casa Matriz':'Sucursal 1'}</button></div><hr style="border:0;border-top:1px solid var(--stroke);margin:23px 0"><p class="eyebrow">HERRAMIENTAS</p><p class="modal-caption">Desde cada fotografía puedes utilizar «Compartir» para copiarla a la otra sucursal. Puedes eliminar solamente la copia de la sucursal donde estés trabajando.</p><p class="modal-caption">El catálogo PRODUCTOS es común. Las hojas UBICACIONES, FOTOS, INVENTARIO, PEDIDOS e HISTORIAL son independientes en Google Sheets.</p>`);
+  openModal('Panel de administración',`<p class="modal-caption">Sesión maestra autorizada. La información visible siempre corresponde a una sola sucursal.</p><p class="eyebrow">SUCURSAL ACTIVA</p><div class="tag-line"><span class="tag">${escapeHtml(branchLabel(state.branch))}</span></div><div class="modal-actions" style="justify-content:start"><button class="button primary" id="adminSwitch">Cambiar a ${state.branch==='S1'?'Casa Matriz':'Sucursal 1'}</button></div><hr style="border:0;border-top:1px solid var(--stroke);margin:23px 0"><p class="eyebrow">HERRAMIENTAS</p><p class="modal-caption">Desde cada fotografía puedes utilizar «Compartir» para copiarla a la otra sucursal. Puedes eliminar solamente la copia de la sucursal donde estés trabajando.</p><p class="modal-caption">Solo hay dos hojas en Google Sheets: SUCURSAL 1 y CASA MATRIZ. Todos los registros de cada sucursal están aislados en su hoja.</p>`);
   $('#adminSwitch').onclick=async()=>{
     const target=state.branch==='S1'?'CM':'S1';
     try{
       await rpc('switchBranch',{branch:target});
       closeModal();state.branch=target;state.activeLoc=null;state.photoCache.clear();photoQueue=[];
       state.fotos=[];state.ubicaciones=[];state.pedidos=[];state.historial=[];state.inventario=[];
-      reindexBranch();unfixLocation();sessionStorage.setItem('bodega_v2_branch',target);
+      reindexBranch();unfixLocation();sessionStorage.setItem('multipart_v3_branch',target);
       $('#branchPill').textContent=branchLabel(target);$('#lightBranch').textContent=branchLabel(target).toUpperCase();
-      renderCatalog();await updateBranchData();setTab('catalog');toast('Sucursal activa: '+branchLabel(target));
+      state.productos=[];state.category='';state.search='';state.filter='all';
+      $('#catalogSearch').value='';$('#categoryFilter').value='';
+      await refreshData(true);setTab('catalog');toast('Sucursal activa: '+branchLabel(target));
     }catch(e){fail(e);}
   };
 }
