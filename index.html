@@ -159,11 +159,11 @@ dialog{border:0;padding:0;background:transparent;color:var(--text);max-height:94
  * Configura aquí la URL de Apps Script V2. Nunca escribas contraseñas aquí.
  *
  * Transmisión sin CORS:
- *  - Formulario POST con ID aleatorio para TODAS las operaciones.
+ *  - POST sin CORS y formulario de respaldo, ambos con ID aleatorio.
  *  - Lectura del resultado con JSONP por el ID aleatorio, en trozos.
  *  - Jamás usar GET para modificar datos y jamás enviar claves en URL.
  */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxOw8lSbpWJg3k_Oz8HI_Vk5J3CxYy_GlO6r-b_WvIVNmp4GdApyTNDaun0FFcyq0aC4Q/exec'; // Debe ser la implementación NUEVA del Code.gs V2, no la V1.
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxGg_Pe_N0K3Vlwt80AY2tLa2gb6UN6hQmkKXRJEkIuepj9nI9RsEticJvakeiCIotMJQ/exec'; // Debe ser la implementación NUEVA del Code.gs V2, no la V1.
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => Array.from(root.querySelectorAll(selector));
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
@@ -280,36 +280,59 @@ function enviarFormularioPost(json,id){
 }
 
 /**
- * Comunicación GitHub → Apps Script.
- * 1) Enviar operación mediante POST (formulario, no GET).
- * 2) Consultar si Apps Script guardó la respuesta, por id aleatorio.
- * 3) Recuperar fragmentos y descomprimir el catálogo cuando sea necesario.
- * 4) Mostrar errores reales del servidor al usuario.
+ * TRANSPORTE GITHUB → APPS SCRIPT (sin CORS).
+ * -------------------------------------------------------------
+ * Primero se intenta un POST JSON con text/plain y mode:no-cors; el
+ * navegador no puede leer esa respuesta (es opaca), por lo que después
+ * consultamos por JSONP un resultado temporal identificado con 48 dígitos
+ * aleatorios. Si el POST no se confirma, el mismo ID se reenvía mediante
+ * formulario a un iframe oculto. El servidor evita procesar dos veces el ID.
+ * Las contraseñas y tokens viajan SOLO en POST, nunca en URLs de JSONP.
  */
 async function rpc(action,payload={}){
   if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL))
-    throw Error('La URL de Apps Script no está configurada correctamente.');
+    throw Error('La URL /exec del servidor no está configurada.');
   const id=requestId();
   const gzip='DecompressionStream' in window;
   const body=JSON.stringify({action,requestId:id,token:state.token||'',gzip,...payload});
-  const cerrarEnvio=enviarFormularioPost(body,id);
-  try{
-    let meta=null;
-    // Apps Script puede tardar varios segundos durante su primera ejecución.
-    for(let i=0;i<55;i++){
-      const r=await jsonp('meta',id);
-      if(r&&r.ready){meta=r;break;}
-      await delay(400);
+  let cleanup=()=>{};
+  let received=false,meta=null, transportError='';
+  // POST simple no dispara preflight OPTIONS (Apps Script no lo admite).
+  // Es normal que fetch dé una respuesta opaca en modo no-cors.
+  fetch(GAS_URL,{
+    method:'POST',mode:'no-cors',credentials:'omit',redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=UTF-8'},body
+  }).catch(err=>{transportError=String(err.message||err);});
+  const poll=async(count,interval)=>{
+    for(let i=0;i<count;i++){
+      try{
+        const result=await jsonp('meta',id);
+        if(result&&result.received)received=true;
+        if(result&&result.ready)return result;
+      }catch(err){transportError=String(err.message||err);}
+      await delay(interval);
     }
-    if(!meta)throw Error('Apps Script responde a las consultas, pero no confirma los envíos POST. Abre Apps Script → Ejecuciones para comprobar si se ejecutó doPost.');
-    if(meta.parts<1||meta.parts>299)throw Error('Respuesta de servidor inválida.');
+    return null;
+  };
+  try{
+    meta=await poll(12,450);
+    if(!meta){
+      // Respaldo para navegadores que bloqueen el POST fetch.
+      cleanup=enviarFormularioPost(body,id);
+      meta=await poll(40,550);
+    }
+    if(!meta){
+      if(received)throw Error('Apps Script recibió la solicitud, pero no terminó de procesarla. Revisa Apps Script → Ejecuciones.');
+      throw Error('GitHub puede consultar el servidor, pero las solicitudes POST no llegan. Comprueba los permisos de implementación y Apps Script → Ejecuciones.'+(transportError?' Detalle: '+transportError:''));
+    }
+    if(meta.parts<1||meta.parts>299)throw Error('El servidor devolvió una respuesta inválida.');
     const chunks=new Array(meta.parts);
     for(let start=0;start<meta.parts;start+=5){
       const nums=Array.from({length:Math.min(5,meta.parts-start)},(_,i)=>start+i);
       await Promise.all(nums.map(async n=>{
         let part=await jsonp('part',id,n);
-        if(part&&part.missing){await delay(350);part=await jsonp('part',id,n);}
-        if(!part||typeof part.text!=='string')throw Error('Respuesta incompleta del servidor.');
+        if(part&&part.missing){await delay(450);part=await jsonp('part',id,n);}
+        if(!part||typeof part.text!=='string')throw Error('No se pudo recuperar la respuesta del servidor.');
         chunks[n]=part.text;
       }));
     }
@@ -319,14 +342,10 @@ async function rpc(action,payload={}){
       raw=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
     }
     const out=JSON.parse(raw);
-    if(!out.ok)throw Error(out.error||'Operación rechazada por el servidor');
+    if(!out.ok)throw Error(out.error||'Operación rechazada por el servidor.');
     return out;
-  }finally{
-    cerrarEnvio();
-  }
+  }finally{cleanup();}
 }
-
-/* Inicializa iconos e interacciones. */
 function init(){
   [['#brandLogin','box'],['#branchIcon1','warehouse'],['#branchIcon2','warehouse'],['#loginArrow','arrow'],['#searchIcon','search'],['#catalogScan','scan'],['#refreshIcon','refresh'],['#adminBtn','settings'],['#logoutBtn','logout'],['#lightWarehouseIcon','warehouse'],['#subIconScan','scan'],['#subIconList','list'],['#subIconSearch','search'],['#subIconRecent','clock'],['#subIconOrder','file'],['#pinLocation','pin'],['#cameraScanIcon','scan'],['#uploadCodeIcon','camera'],['#closeCamera','close']].forEach(([el,icon])=>setIcon(el,icon));
   $$('.branch-choice').forEach(b=>b.addEventListener('click',()=>{state.branch=b.dataset.branch;$$('.branch-choice').forEach(x=>x.classList.toggle('active',x===b));}));
@@ -378,6 +397,7 @@ async function onLogin(e){
     if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL))throw Error('Falta configurar la URL /exec del servidor V2 en index.html.');
     const health=await jsonp('health','');
     if(!health||health.app!=='MULTIPART_V2')throw Error('La URL corresponde a otra versión de Apps Script. Publica Code.gs de la V2 y copia su enlace /exec en index.html.');
+    if(health.version!=='2.0.3')throw Error('Apps Script sigue publicado en una versión antigua ('+(health.version||'desconocida')+'). Actualiza Code.gs y publica una nueva versión.');
     if(!health.configured)throw Error('Ejecuta configurar() en Apps Script antes de ingresar.');
     if(!health.keysConfigured)throw Error('Falta ejecutar configurarClaves() con las siete claves de 4 a 8 caracteres en Apps Script.');
     submit.textContent='Verificando acceso...';
